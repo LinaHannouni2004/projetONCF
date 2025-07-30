@@ -32,7 +32,7 @@ FROM commandes c
 LEFT JOIN articles a ON c.article_id = a.article_id
 LEFT JOIN fournisseurs f ON c.fournisseur_id = f.fournisseur_id
 LEFT JOIN demandes_matiere dm ON c.article_id = dm.article_id
-LIMIT 10000
+LIMIT 1000
 """
 
 # 🚀 Chargement des données
@@ -44,6 +44,25 @@ except Exception as e:
     st.error("❌ Erreur lors de l'exécution de la requête SQL.")
     st.exception(e)
     st.stop()
+
+# 🔁 Suppression des doublons exacts sauf si la date_commande diffère
+df = df.drop_duplicates(
+    subset=[
+        'commande_id',
+        'date_commande',
+        'quantite',
+        'fournisseur_id',
+        'article_id',
+        'libelle_article',
+        'type_achat',
+        'montant_commande',
+        'designation',
+        'famille_article',
+        'fournisseur_fk',
+        'quantite_dm'
+    ],
+    keep='first'
+)
 
 # 🧹 Nettoyage et préparation
 for col in ['montant_commande', 'quantite', 'quantite_dm']:
@@ -95,10 +114,17 @@ col2.metric("📦 Quantité Totale Commandée", f"{total_quantite:,.0f}")
 
 # 🔝 Top 10 des articles
 st.subheader("🏆 Top 10 des Articles par Montant Commandé")
+
+# Graphique barre
 fig_top_articles = px.bar(top_articles, x='designation', y='montant_commande',
                           labels={'designation': "Article", 'montant_commande': "Montant Commandé (MAD)"},
                           color='montant_commande', height=400)
 st.plotly_chart(fig_top_articles, use_container_width=True)
+
+# Liste simple des noms + montants
+st.markdown("### 🗂️ Noms et Montants des Top 10 Articles")
+for i, row in top_articles.iterrows():
+    st.markdown(f"{i+1}. {row['designation']} — {row['montant_commande']:,.2f} MAD")
 
 # 📈 Évolution mensuelle
 st.subheader("📈 Evolution Mensuelle du Montant des Commandes")
